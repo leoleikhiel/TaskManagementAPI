@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TaskManagementAPI.Data;
 
@@ -11,9 +12,11 @@ using TaskManagementAPI.Data;
 namespace TaskManagementAPI.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251121234726_CreateCategoryTable")]
+    partial class CreateCategoryTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -35,7 +38,7 @@ namespace TaskManagementAPI.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Category", (string)null);
+                    b.ToTable("Category");
                 });
 
             modelBuilder.Entity("TaskManagementAPI.Models.Product", b =>
@@ -57,7 +60,7 @@ namespace TaskManagementAPI.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Products", (string)null);
+                    b.ToTable("Products");
                 });
 
             modelBuilder.Entity("TaskManagementAPI.Models.Task", b =>
@@ -77,9 +80,6 @@ namespace TaskManagementAPI.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime?>("DueDate")
-                        .HasColumnType("datetime2");
-
                     b.Property<bool>("IsCompleted")
                         .HasColumnType("bit");
 
@@ -90,16 +90,21 @@ namespace TaskManagementAPI.Migrations
 
                     b.HasIndex("CategoryId");
 
-                    b.ToTable("Tasks", (string)null);
+                    b.ToTable("Tasks");
                 });
 
             modelBuilder.Entity("TaskManagementAPI.Models.Task", b =>
                 {
                     b.HasOne("TaskManagementAPI.Models.Category", "Category")
-                        .WithMany()
+                        .WithMany("Tasks")
                         .HasForeignKey("CategoryId");
 
                     b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("TaskManagementAPI.Models.Category", b =>
+                {
+                    b.Navigation("Tasks");
                 });
 #pragma warning restore 612, 618
         }

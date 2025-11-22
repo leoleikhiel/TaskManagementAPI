@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 using TaskManagementAPI.Models;
+using Microsoft.EntityFrameworkCore;
+using TaskManagementAPI.Data;
 
 namespace TaskManagementAPI.Controllers
 {
@@ -9,23 +11,24 @@ namespace TaskManagementAPI.Controllers
     [ApiController]
     public class ProductsController : ControllerBase
     {
-        private static List<Product> products = new List<Product>
+        private readonly ApplicationDbContext _context;
+
+        public ProductsController(ApplicationDbContext context)
         {
-            new Product { Id = 1, Name = "Laptop", Price = 999.99, Stock = 10 },
-            new Product { Id = 2, Name = "Smartphone", Price = 499.99, Stock = 25 },
-            new Product { Id = 3, Name = "Tablet", Price = 299.99, Stock = 15 }
-        };
+            _context = context;
+        }
 
         [HttpGet]
-        public IActionResult GetAllProducts()
+        public async Task<IActionResult> GetAllProducts()
         {
+            var products = await _context.Products.ToListAsync();
             return Ok(products);
         }
 
         [HttpGet("{id}")]
-        public IActionResult GetProductById(int id)
+        public async Task<IActionResult> GetProductById(int id)
         {
-            var product = products.Find(p => p.Id == id);
+            var product = await _context.Products.FindAsync(id);
 
             if(product == null)
             {
@@ -36,28 +39,25 @@ namespace TaskManagementAPI.Controllers
         }
 
         [HttpPost]
-        public IActionResult CreateProduct(CreateProductDto createProduct)
+        public async Task<IActionResult> CreateProduct(CreateProductDto createProduct)
         {
-            var newId = products.Any() ? products.Max(p => p.Id) : 0;
-            newId++;
-
             var newProduct = new Product
             {
-                Id = newId,
                 Name = createProduct.Name,
                 Price = createProduct.Price,
                 Stock = createProduct.Stock,
             };
 
-            products.Add(newProduct);
+            _context.Products.Add(newProduct);
+            await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetProductById), new { id = newProduct.Id }, newProduct);
         }
 
         [HttpPut("{id}")]
-        public IActionResult UpdateProduct(int id, CreateProductDto updateProduct)
+        public async Task<IActionResult> UpdateProduct(int id, CreateProductDto updateProduct)
         {
-            var product = products.Find(p => p.Id == id);
+            var product = await _context.Products.FindAsync(id);
 
             if (product == null)
             {
@@ -68,22 +68,35 @@ namespace TaskManagementAPI.Controllers
             product.Price = updateProduct.Price ?? product.Price;
             product.Stock = updateProduct.Stock ?? product.Stock;
 
+            await _context.SaveChangesAsync();
+
             return Ok(product);
         }
 
         [HttpDelete("{id}")]
-        public IActionResult DeleteProduct(int id)
+        public async Task<IActionResult> DeleteProduct(int id)
         {
-            var product = products.Find(t => t.Id == id);
+            var product = await _context.Products.FindAsync(id);
 
             if (product == null)
             {
                 return NotFound();
             }
 
-            products.Remove(product);
+            _context.Products.Remove(product);
+            await _context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        [HttpGet("low-stock")]
+        public async Task<IActionResult> GetLowStockProducts([FromQuery] int threshold = 10)
+        {
+            var products = await _context.Products
+                .Where(p => p.Stock < threshold)
+                .ToListAsync();
+
+            return Ok(products);
         }
     }
 }
