@@ -1,28 +1,37 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using TaskManagementAPI.Data;
 using TaskManagementAPI.Models;
+using TaskManagementAPI.Services;
 
 namespace TaskManagementAPI.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class TasksController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ITasksService _tasksService;
 
-        public TasksController(ApplicationDbContext context)
+        public TasksController(ITasksService tasksService)
         {
-            _context = context;
+            _tasksService = tasksService;
+        }
+
+        private int GetCurrentUserId()
+        {
+            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAllTasks()
         {
-            var tasks = await _context.Tasks
-                .Include(t => t.Category)
-                .ToListAsync();
+            var userId = GetCurrentUserId();
+
+            var tasks = await _tasksService.GetAllTasksAsync(userId);
 
             return Ok(tasks);
         }
@@ -30,9 +39,9 @@ namespace TaskManagementAPI.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetTaskById(int id)
         {
-            var task = await _context.Tasks
-                .Include(t => t.Category)
-                .FirstOrDefaultAsync(t => t.Id == id);
+            var userId = GetCurrentUserId();
+
+            var task = await _tasksService.GetTaskByIdAsync(id, userId);
 
             if (task == null)
             {
@@ -45,16 +54,9 @@ namespace TaskManagementAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateTask(CreateTaskDto taskDto)
         {
-            var newTask = new Models.Task
-            {
-                Title = taskDto.Title,
-                Description = taskDto.Description,
-                CategoryId = taskDto.CategoryId,
-                DueDate = taskDto.DueDate
-            };
+            var userId = GetCurrentUserId();
 
-            _context.Tasks.Add(newTask);
-            await _context.SaveChangesAsync();
+            var newTask = await _tasksService.CreateTaskAsync(taskDto, userId);
 
             return CreatedAtAction(nameof(GetTaskById), new { id = newTask.Id }, newTask);
         }
@@ -62,20 +64,14 @@ namespace TaskManagementAPI.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateTask(int id, UpdateTaskDto updateTaskDto)
         {
-            var task = await _context.Tasks.FindAsync(id);
+            var userId = GetCurrentUserId();
+
+            var task = await _tasksService.UpdateTaskAsync(id, updateTaskDto, userId);
 
             if (task == null)
             {
                 return NotFound();
             }
-
-            task.Title = updateTaskDto.Title ?? task.Title;
-            task.Description = updateTaskDto.Description ?? task.Description;
-            task.IsCompleted = updateTaskDto.IsCompleted ?? task.IsCompleted;
-            task.CategoryId = updateTaskDto.CategoryId ?? task.CategoryId;
-            task.DueDate = updateTaskDto.DueDate ?? task.DueDate;
-
-            await _context.SaveChangesAsync();
 
             return Ok(task);
         }
@@ -83,15 +79,14 @@ namespace TaskManagementAPI.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTask(int id)
         {
-            var task = await _context.Tasks.FindAsync(id);
+            var userId = GetCurrentUserId();
 
-            if (task == null)
+            var deleted = await _tasksService.DeleteTaskAsync(id, userId);
+
+            if (!deleted)
             {
                 return NotFound();
             }
-
-            _context.Tasks.Remove(task);
-            await _context.SaveChangesAsync();
 
             return NoContent();
         }
@@ -99,10 +94,10 @@ namespace TaskManagementAPI.Controllers
         [HttpPut("complete-all")]
         public async Task<IActionResult> CompleteAllTasks()
         {
-            var updatedCount = await _context.Tasks
-                .ExecuteUpdateAsync(s => s.SetProperty(t => t.IsCompleted, true));
+            var userId = GetCurrentUserId();
+            var count = await _tasksService.CompleteAllTasksAsync(userId);
 
-            return Ok(new { message = "All tasks completed!", count = updatedCount });
+            return Ok(new { message = "All tasks completed!", count });
         }
 
         [HttpGet("search")]
@@ -113,10 +108,8 @@ namespace TaskManagementAPI.Controllers
                 return BadRequest("Search title cannot be empty");
             }
 
-            var tasks = await _context.Tasks
-                .Include(t => t.Category)
-                .Where(t => t.Title.Contains(title))
-                .ToListAsync();
+            var userId = GetCurrentUserId();
+            var tasks = await _tasksService.SearchTasksAsync(title, userId);
 
             return Ok(tasks);
         }
@@ -124,32 +117,18 @@ namespace TaskManagementAPI.Controllers
         [HttpGet("filter")]
         public async Task<IActionResult> FilterTasks([FromQuery] bool? isCompleted, [FromQuery] int? categoryId)
         {
-            var query = _context.Tasks.Include(t => t.Category).AsQueryable();
+            var userId = GetCurrentUserId();
+            var tasks = await _tasksService.FilterTasksAsync(isCompleted, categoryId, userId);
 
-            if(isCompleted.HasValue)
-            {
-                query = query.Where(t => t.IsCompleted == isCompleted.Value);
-            }
-
-            if(categoryId.HasValue)
-            {
-                query = query.Where(t => t.CategoryId == categoryId.Value);
-            }
-
-            var tasks = await query.ToListAsync();
             return Ok(tasks);
         }
 
         [HttpGet("overdue")]
         public async Task<IActionResult> GetOverdueTasks()
         {
+            var userId = GetCurrentUserId();
             var now = DateTime.UtcNow;
-
-            var tasks = await _context.Tasks
-                .Include(t => t.Category)
-                .Where(t => t.IsCompleted == false && t.DueDate.HasValue && t.DueDate < now)
-                .OrderBy(t => t.CreatedAt)
-                .ToListAsync();
+            var tasks = await _tasksService.GetOverdueTasksAsync(userId);
 
             return Ok(tasks);
         }
@@ -157,28 +136,10 @@ namespace TaskManagementAPI.Controllers
         [HttpGet("statistics")]
         public async Task<IActionResult> GetStatistics()
         {
-            var totalTasks = await _context.Tasks.CountAsync();
-            var completedTasks = await _context.Tasks.CountAsync(t => t.IsCompleted);
-            var incompleteTasks = totalTasks - completedTasks;
+            var userId = GetCurrentUserId();
+            var stats = await _tasksService.GetStatisticsAsync(userId);
 
-            var tasksByCategory = await _context.Tasks
-                .Include(t => t.Category)
-                .GroupBy(t => t.Category.Name)
-                .Select(g => new
-                {
-                    Category = g.Key ?? "Uncategorized",
-                    Count = g.Count()
-                })
-                .ToListAsync();
-
-            return Ok(new
-            {
-                total = totalTasks,
-                completedTasks = completedTasks,
-                incompleteTasks = incompleteTasks,
-                completionRate = totalTasks > 0 ? (completedTasks * 100.0 / totalTasks) : 0,
-                byCategory = tasksByCategory
-            });
+            return Ok(stats);
         }
     }
 }

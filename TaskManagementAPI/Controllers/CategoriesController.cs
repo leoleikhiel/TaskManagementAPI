@@ -1,35 +1,46 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using TaskManagementAPI.Data;
 using TaskManagementAPI.Models;
+using TaskManagementAPI.Services;
 
 namespace TaskManagementAPI.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class CategoriesController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ICategoriesService _categoriesService;
 
-        public CategoriesController(ApplicationDbContext context)
+        public CategoriesController(ICategoriesService categoriesService)
         {
-            _context = context;
+            _categoriesService = categoriesService;
+        }
+
+        private int GetCurrentUserId()
+        {
+            return int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value!);
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAllCategories()
         {
-            var categories = await _context.Categories.ToListAsync();
+            var userId = GetCurrentUserId();
+            var categories = await _categoriesService.GetAllCategoriesAsync(userId);
             return Ok(categories);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetCategoryById(int id)
         {
-            var category = await _context.Categories.FindAsync(id);
-            
-            if(category == null)
+            var userId = GetCurrentUserId();
+            var category = await _categoriesService.GetCategoryByIdAsync(id, userId);
+
+            if (category == null)
             {
                 return NotFound();
             }
@@ -40,13 +51,8 @@ namespace TaskManagementAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateCategory(CreateCategoryDto createCategory)
         {
-            var newCategory = new Category
-            {
-                Name = createCategory.Name
-            };
-
-            _context.Categories.Add(newCategory);
-            await _context.SaveChangesAsync();
+            var userId = GetCurrentUserId();
+            var newCategory = await _categoriesService.CreateCategoryAsync(createCategory, userId);
 
             return CreatedAtAction(nameof(GetCategoryById), new { id = newCategory.Id }, newCategory);
         }
@@ -54,15 +60,13 @@ namespace TaskManagementAPI.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateCategory(int id, CreateCategoryDto updateCategory)
         {
-            var category = await _context.Categories.FindAsync(id);
+            var userId = GetCurrentUserId();
+            var category = await _categoriesService.UpdateCategoryAsync(id, updateCategory, userId);
 
             if(category == null)
             {
                 return NotFound();
             }
-
-            category.Name = updateCategory.Name ?? category.Name;
-            await _context.SaveChangesAsync();
 
             return Ok(category);
         }
@@ -70,15 +74,13 @@ namespace TaskManagementAPI.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCategory(int id)
         {
-            var category = await _context.Categories.FindAsync(id);
+            var userId = GetCurrentUserId();
+            var deleted = await _categoriesService.DeleteCategoryAsync(id, userId);
 
-            if (category == null)
+            if(!deleted)
             {
                 return NotFound();
             }
-
-            _context.Categories.Remove(category);
-            await _context.SaveChangesAsync();
 
             return NoContent();
         }
@@ -86,19 +88,10 @@ namespace TaskManagementAPI.Controllers
         [HttpGet("{id}/tasks")]
         public async Task<IActionResult> GetCategoryTasks(int id)
         {
-            var category = await _context.Categories.FindAsync(id);
+            var userId = GetCurrentUserId();
+            var result = await _categoriesService.GetCategoryTasksAsync(id, userId);
 
-            if(category == null)
-            {
-                return NotFound();
-            }
-
-            var tasks = await _context.Tasks
-                .Include(t => t.Category)
-                .Where(t => t.CategoryId == category.Id)
-                .ToListAsync();
-
-            return Ok(new { category = category, tasks = tasks, count = tasks.Count });
+            return Ok(result);
         }
     }
 }

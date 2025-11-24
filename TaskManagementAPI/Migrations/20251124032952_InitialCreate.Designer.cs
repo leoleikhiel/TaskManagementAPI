@@ -12,8 +12,8 @@ using TaskManagementAPI.Data;
 namespace TaskManagementAPI.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251121234726_CreateCategoryTable")]
-    partial class CreateCategoryTable
+    [Migration("20251124032952_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -36,9 +36,14 @@ namespace TaskManagementAPI.Migrations
                     b.Property<string>("Name")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
-                    b.ToTable("Category");
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Category", (string)null);
                 });
 
             modelBuilder.Entity("TaskManagementAPI.Models.Product", b =>
@@ -60,7 +65,7 @@ namespace TaskManagementAPI.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Products");
+                    b.ToTable("Products", (string)null);
                 });
 
             modelBuilder.Entity("TaskManagementAPI.Models.Task", b =>
@@ -80,30 +85,100 @@ namespace TaskManagementAPI.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<bool>("IsCompleted")
                         .HasColumnType("bit");
 
                     b.Property<string>("Title")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CategoryId");
 
-                    b.ToTable("Tasks");
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Tasks", (string)null);
+                });
+
+            modelBuilder.Entity("TaskManagementAPI.Models.User", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("UserRole")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("Users", (string)null);
+                });
+
+            modelBuilder.Entity("TaskManagementAPI.Models.Category", b =>
+                {
+                    b.HasOne("TaskManagementAPI.Models.User", "User")
+                        .WithMany("Categories")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("TaskManagementAPI.Models.Task", b =>
                 {
                     b.HasOne("TaskManagementAPI.Models.Category", "Category")
-                        .WithMany("Tasks")
+                        .WithMany()
                         .HasForeignKey("CategoryId");
 
+                    b.HasOne("TaskManagementAPI.Models.User", "User")
+                        .WithMany("Tasks")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Category");
+
+                    b.Navigation("User");
                 });
 
-            modelBuilder.Entity("TaskManagementAPI.Models.Category", b =>
+            modelBuilder.Entity("TaskManagementAPI.Models.User", b =>
                 {
+                    b.Navigation("Categories");
+
                     b.Navigation("Tasks");
                 });
 #pragma warning restore 612, 618
