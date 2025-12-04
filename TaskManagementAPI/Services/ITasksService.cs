@@ -12,7 +12,10 @@ namespace TaskManagementAPI.Services
         Task<int> CompleteAllTasksAsync(int userId);
         Task<IEnumerable<Models.Task>> SearchTasksAsync(string title, int userId);
         Task<IEnumerable<Models.Task>> FilterTasksAsync(bool? isCompleted, int? categoryId,int userId);
-        Task<IEnumerable<Models.Task>> GetOverdueTasksAsync(int userId);
         Task<object> GetStatisticsAsync(int userId);
+        Task<List<TaskListItemDto>> GetTasksForTodayAsync(int userId);
+        Task<List<TaskListItemDto>> GetTasksForWeekAsync(int userId);
+        Task<List<TaskListItemDto>> GetOverdueTasksAsync(int userId);
+        Task<List<CalendarGroupDto>> GetTasksGroupedByDateAsync(DateTime startDate, DateTime endDate, int userId);
     }
 }

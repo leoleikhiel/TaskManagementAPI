@@ -13,6 +13,26 @@ namespace TaskManagementAPI.Services
             _context = context;
         }
 
+        private DateTime? GetDisplayDate(Models.Task task)
+        {
+            return task.ScheduledDate ?? task.DueDate;
+        }
+
+        private TaskListItemDto MapToListItemDto(Models.Task task)
+        {
+            return new TaskListItemDto
+            {
+                Id = task.Id,
+                Title = task.Title,
+                IsCompleted = task.IsCompleted,
+                DueDate = task.DueDate,
+                ScheduledDate = task.ScheduledDate,
+                IsOverdue = task.IsOverdue,
+                CategoryName = task.Category != null ? task.Category.Name : null,
+                NotesCount = task.Notes.Count
+            };
+        }
+
         public async Task<IEnumerable<Models.Task>> GetAllTasksAsync(int userId)
         {
             return await _context.Tasks
@@ -76,7 +96,23 @@ namespace TaskManagementAPI.Services
             task.Title = taskDto.Title ?? task.Title;
             task.Description = taskDto.Description ?? task.Description;
             task.DueDate = taskDto.DueDate ?? task.DueDate;
+            task.ScheduledDate = taskDto.ScheduledDate ?? task.ScheduledDate;
             task.CategoryId = updateCategoryId;
+
+            if(taskDto.IsCompleted.HasValue)
+            {
+                if(taskDto.IsCompleted.Value && !task.IsCompleted)
+                {
+                    task.IsCompleted = true;
+                    task.CompletedAt = taskDto.CompletedAt ?? DateTime.UtcNow;
+                }
+                else if(!taskDto.IsCompleted.Value && task.IsCompleted)
+                {
+                    task.IsCompleted = false;
+                    task.CompletedAt = null;
+                }
+            }
+
             await _context.SaveChangesAsync();
             return task;
         }
@@ -122,16 +158,6 @@ namespace TaskManagementAPI.Services
             return await query.ToListAsync();
         }
 
-        public async Task<IEnumerable<Models.Task>> GetOverdueTasksAsync(int userId)
-        {
-            var now = DateTime.UtcNow;
-            return await _context.Tasks
-                .Include(t => t.Category)
-                .Where(t => t.UserId == userId && t.DueDate.HasValue && t.DueDate < now && t.IsCompleted == false)
-                .OrderBy(t => t.DueDate)
-                .ToListAsync();
-        }
-
         public async Task<object> GetStatisticsAsync(int userId)
         {
             var totalTasks = await _context.Tasks.CountAsync(t => t.UserId == userId);
@@ -158,6 +184,80 @@ namespace TaskManagementAPI.Services
                 byCategory = tasksByCategory
             };
 
+        }
+
+        public async Task<List<TaskListItemDto>> GetTasksForTodayAsync(int userId)
+        {
+            var today = DateTime.UtcNow.Date;
+
+            var tasks = await _context.Tasks
+                .Where(t => t.UserId == userId)
+                .Where(t => (t.DueDate.HasValue && t.DueDate.Value.Date == today)
+                            || (t.ScheduledDate.HasValue && t.ScheduledDate.Value.Date == today))
+                .Include(t => t.Category)
+                .Include(t => t.Notes)
+                .ToListAsync();
+
+            return tasks.Select(MapToListItemDto).ToList();
+        }
+
+        public async Task<List<TaskListItemDto>> GetTasksForWeekAsync(int userId)
+        {
+            var today = DateTime.UtcNow.Date;
+
+            var daysSinceMonday = ((int)today.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
+            var startOfWeek = today.AddDays(-daysSinceMonday);
+
+            var endOfWeek = startOfWeek.AddDays(6);
+
+            var tasks = await _context.Tasks
+                .Where(t => t.UserId == userId)
+                .Where(t => (t.ScheduledDate.HasValue && t.ScheduledDate.Value.Date >= startOfWeek && t.ScheduledDate.Value.Date <= endOfWeek)
+                            || (!t.ScheduledDate.HasValue && t.DueDate.HasValue && t.DueDate.Value.Date >= startOfWeek && t.DueDate.Value.Date <= endOfWeek))
+                .Include(t => t.Category)
+                .Include(t => t.Notes)
+                .ToListAsync();
+
+            return tasks.Select(MapToListItemDto).ToList();
+        }
+
+        public async Task<List<TaskListItemDto>> GetOverdueTasksAsync(int userId)
+        {
+            var today = DateTime.UtcNow.Date;
+
+            var tasks = await _context.Tasks
+                .Where(t => t.UserId == userId)
+                .Where(t => !t.IsCompleted && t.DueDate.HasValue && t.DueDate.Value.Date < today)
+                .Include(t => t.Category)
+                .Include(t => t.Notes)
+                .OrderBy(t => t.DueDate)
+                .ToListAsync();
+
+            return tasks.Select(MapToListItemDto).ToList();
+        }
+
+        public async Task<List<CalendarGroupDto>> GetTasksGroupedByDateAsync(DateTime startDate, DateTime endDate, int userId)
+        {
+            var tasks = await _context.Tasks
+                .Where(t => t.UserId == userId)
+                .Where(t => (t.ScheduledDate.HasValue && t.ScheduledDate.Value.Date >= startDate.Date && t.ScheduledDate.Value.Date <= endDate.Date)
+                            || (!t.ScheduledDate.HasValue && t.DueDate.HasValue && t.DueDate.Value.Date >= startDate.Date && t.DueDate.Value.Date <= endDate.Date))
+                .Include(t => t.Category)
+                .Include(t => t.Notes)
+                .ToListAsync();
+
+            var grouped = tasks
+                .GroupBy(t => GetDisplayDate(t)?.Date)
+                .Where(g => g.Key.HasValue)
+                .OrderBy(g => g.Key)
+                .Select(g => new CalendarGroupDto
+                {
+                    Date = g.Key.Value,
+                    Tasks = g.Select(MapToListItemDto).ToList()
+                })
+                .ToList();
+
+            return grouped;
         }
     }
 }

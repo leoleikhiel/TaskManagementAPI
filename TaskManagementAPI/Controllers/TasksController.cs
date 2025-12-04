@@ -127,7 +127,7 @@ namespace TaskManagementAPI.Controllers
         public async Task<IActionResult> GetOverdueTasks()
         {
             var userId = GetCurrentUserId();
-            var now = DateTime.UtcNow;
+
             var tasks = await _tasksService.GetOverdueTasksAsync(userId);
 
             return Ok(tasks);
@@ -140,6 +140,87 @@ namespace TaskManagementAPI.Controllers
             var stats = await _tasksService.GetStatisticsAsync(userId);
 
             return Ok(stats);
+        }
+
+        [HttpGet("today")]
+        public async Task<ActionResult<List<TaskListItemDto>>> GetTasksForToday()
+        {
+            var userId = GetCurrentUserId();
+
+            var tasks = await _tasksService.GetTasksForTodayAsync(userId);
+
+            return Ok(tasks);
+        }
+
+        [HttpGet("week")]
+        public async Task<ActionResult<List<TaskListItemDto>>> GetTasksForWeek()
+        {
+            var userId = GetCurrentUserId();
+
+            var tasks = await _tasksService.GetTasksForWeekAsync(userId);
+
+            return Ok(tasks);
+        }
+
+        [HttpGet("calendar")]
+        public async Task<ActionResult<List<CalendarGroupDto>>> GetCalendarTasks([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
+        {
+            var userId = GetCurrentUserId();
+
+            if(!startDate.HasValue || !endDate.HasValue)
+            {
+                return BadRequest(new
+                {
+                    error = "Both startDate and endDate are required",
+                    example = "/api/tasks/calendar?startDate=2025-01-01&endDate=2025-01-31"
+                });
+            }
+
+            if (startDate.Value > endDate.Value)
+            {
+                return BadRequest(new
+                {
+                    error = "startDate must be before or equal to endDate"
+                });
+            }
+
+            var daysDiff = (endDate.Value.Date - startDate.Value.Date).TotalDays;
+            if (daysDiff > 90)
+            {
+                return BadRequest(new
+                {
+                    error = "Date range cannot exceed 90 days",
+                    requested = $"{daysDiff} days",
+                    maximum = "90 days"
+                });
+            }
+
+            var calendar = await _tasksService.GetTasksGroupedByDateAsync(
+                startDate.Value.Date,
+                endDate.Value.Date,
+                userId
+            );
+
+            return Ok(calendar);
+        }
+
+        [HttpGet("calendar/month")]
+        public async Task<ActionResult<List<CalendarGroupDto>>> GetMonthCalendar([FromQuery] int? month, [FromQuery] int? year)
+        {
+            var userId = GetCurrentUserId();
+
+            var targetMonth = month ?? DateTime.UtcNow.Month;
+            var targetYear = year ?? DateTime.UtcNow.Year;
+
+            if (targetMonth < 1 || targetMonth > 12)
+                return BadRequest("Month must be between 1 and 12");
+
+            var startDate = new DateTime(targetYear, targetMonth, 1);
+            var endDate = startDate.AddMonths(1).AddDays(-1);
+
+            var calendar = await _tasksService.GetTasksGroupedByDateAsync(startDate, endDate, userId);
+
+            return Ok(calendar);
         }
     }
 }

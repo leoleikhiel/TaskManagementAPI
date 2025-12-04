@@ -14,5 +14,7 @@ namespace TaskManagementAPI.Models
 
         public int? CategoryId { get; set; }
         public DateTime? DueDate { get; set; }
+        public DateTime? ScheduledDate { get; set; }
+        public DateTime? CompletedAt { get; set; }
     }
 }

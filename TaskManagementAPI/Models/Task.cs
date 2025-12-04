@@ -1,4 +1,6 @@
-﻿namespace TaskManagementAPI.Models
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace TaskManagementAPI.Models
 {
     public class Task
     {
@@ -12,5 +14,11 @@
         public Category? Category { get; set; }
         public int UserId { get; set; }
         public User? User { get; set; }
+        public ICollection<TaskNote> Notes { get; set; } = new List<TaskNote>();
+        public DateTime? ScheduledDate { get; set; }
+        public DateTime? CompletedAt { get; set; }
+
+        [NotMapped]
+        public bool IsOverdue => !IsCompleted && DueDate.HasValue && DateTime.UtcNow.Date > DueDate.Value.Date;
     }
 }

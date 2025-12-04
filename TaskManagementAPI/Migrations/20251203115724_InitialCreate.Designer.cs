@@ -12,7 +12,7 @@ using TaskManagementAPI.Data;
 namespace TaskManagementAPI.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251124032952_InitialCreate")]
+    [Migration("20251203115724_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -46,28 +46,6 @@ namespace TaskManagementAPI.Migrations
                     b.ToTable("Category", (string)null);
                 });
 
-            modelBuilder.Entity("TaskManagementAPI.Models.Product", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Name")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<double?>("Price")
-                        .HasColumnType("float");
-
-                    b.Property<int?>("Stock")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Products", (string)null);
-                });
-
             modelBuilder.Entity("TaskManagementAPI.Models.Task", b =>
                 {
                     b.Property<int>("Id")
@@ -78,6 +56,9 @@ namespace TaskManagementAPI.Migrations
 
                     b.Property<int?>("CategoryId")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -91,6 +72,9 @@ namespace TaskManagementAPI.Migrations
                     b.Property<bool>("IsCompleted")
                         .HasColumnType("bit");
 
+                    b.Property<DateTime?>("ScheduledDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Title")
                         .HasColumnType("nvarchar(max)");
 
@@ -101,9 +85,40 @@ namespace TaskManagementAPI.Migrations
 
                     b.HasIndex("CategoryId");
 
+                    b.HasIndex("DueDate");
+
                     b.HasIndex("UserId");
 
                     b.ToTable("Tasks", (string)null);
+                });
+
+            modelBuilder.Entity("TaskManagementAPI.Models.TaskNote", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("TaskId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TaskId", "CreatedAt");
+
+                    b.ToTable("TaskNotes", (string)null);
                 });
 
             modelBuilder.Entity("TaskManagementAPI.Models.User", b =>
@@ -173,6 +188,22 @@ namespace TaskManagementAPI.Migrations
                     b.Navigation("Category");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("TaskManagementAPI.Models.TaskNote", b =>
+                {
+                    b.HasOne("TaskManagementAPI.Models.Task", "Task")
+                        .WithMany("Notes")
+                        .HasForeignKey("TaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Task");
+                });
+
+            modelBuilder.Entity("TaskManagementAPI.Models.Task", b =>
+                {
+                    b.Navigation("Notes");
                 });
 
             modelBuilder.Entity("TaskManagementAPI.Models.User", b =>
