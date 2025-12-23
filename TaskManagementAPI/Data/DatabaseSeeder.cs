@@ -143,15 +143,15 @@
             return categories;
         }
 
-        private static List<Models.Task> CreateTasks(List<User> users, List<Category> categories)
+        private static List<TaskItem> CreateTasks(List<User> users, List<Category> categories)
         {
-            var tasks = new List<Models.Task>();
+            var tasks = new List<TaskItem>();
             var today = DateTime.UtcNow.Date;
             var johnCategories = categories.Where(c => c.UserId == users[0].Id).ToList();
             var janeCategories = categories.Where(c => c.UserId == users[1].Id).ToList();
 
             // ============= TODAY TASKS =============
-            tasks.Add(new Models.Task
+            tasks.Add(new TaskItem
             {
                 Title = "Review quarterly report",
                 Description = "Check and review the Q4 quarterly report",
@@ -163,7 +163,7 @@
                 CreatedAt = today.AddDays(-5)
             });
 
-            tasks.Add(new Models.Task
+            tasks.Add(new TaskItem
             {
                 Title = "Grocery shopping",
                 Description = "Buy milk, eggs, and vegetables",
@@ -176,7 +176,7 @@
             });
 
             // ============= THIS WEEK TASKS (Due within 7 days) =============
-            tasks.Add(new Models.Task
+            tasks.Add(new TaskItem
             {
                 Title = "Team meeting preparation",
                 Description = "Prepare slides and agenda for team meeting",
@@ -188,7 +188,7 @@
                 CreatedAt = today.AddDays(-4)
             });
 
-            tasks.Add(new Models.Task
+            tasks.Add(new TaskItem
             {
                 Title = "Complete online course module",
                 Description = "Finish Module 3 of the Advanced C# course",
@@ -200,7 +200,7 @@
                 CreatedAt = today.AddDays(-2)
             });
 
-            tasks.Add(new Models.Task
+            tasks.Add(new TaskItem
             {
                 Title = "Doctor appointment",
                 Description = "Annual checkup with Dr. Johnson",
@@ -213,7 +213,7 @@
             });
 
             // ============= THIS MONTH TASKS (Due within 30 days) =============
-            tasks.Add(new Models.Task
+            tasks.Add(new TaskItem
             {
                 Title = "Submit project proposal",
                 Description = "Finalize and submit the new project proposal to management",
@@ -225,7 +225,7 @@
                 CreatedAt = today.AddDays(-20)
             });
 
-            tasks.Add(new Models.Task
+            tasks.Add(new TaskItem
             {
                 Title = "Update personal blog",
                 Description = "Write and publish new blog post about productivity tips",
@@ -237,7 +237,7 @@
                 CreatedAt = today.AddDays(-8)
             });
 
-            tasks.Add(new Models.Task
+            tasks.Add(new TaskItem
             {
                 Title = "Gym membership renewal",
                 Description = "Renew annual gym membership",
@@ -250,7 +250,7 @@
             });
 
             // ============= NEXT MONTH TASKS =============
-            tasks.Add(new Models.Task
+            tasks.Add(new TaskItem
             {
                 Title = "Plan vacation",
                 Description = "Research and book flights for summer vacation",
@@ -262,7 +262,7 @@
                 CreatedAt = today.AddDays(-3)
             });
 
-            tasks.Add(new Models.Task
+            tasks.Add(new TaskItem
             {
                 Title = "Performance review meeting",
                 Description = "Annual performance review with HR",
@@ -275,7 +275,7 @@
             });
 
             // ============= OVERDUE TASKS =============
-            tasks.Add(new Models.Task
+            tasks.Add(new TaskItem
             {
                 Title = "Fix billing system bug",
                 Description = "Critical: Fix the billing calculation error",
@@ -287,7 +287,7 @@
                 CreatedAt = today.AddDays(-15)
             });
 
-            tasks.Add(new Models.Task
+            tasks.Add(new TaskItem
             {
                 Title = "Call dentist for appointment",
                 Description = "Schedule dental cleaning appointment",
@@ -299,7 +299,7 @@
                 CreatedAt = today.AddDays(-20)
             });
 
-            tasks.Add(new Models.Task
+            tasks.Add(new TaskItem
             {
                 Title = "Client feedback review",
                 Description = "Review and respond to client feedback from last week",
@@ -312,7 +312,7 @@
             });
 
             // ============= COMPLETED TASKS =============
-            tasks.Add(new Models.Task
+            tasks.Add(new TaskItem
             {
                 Title = "Setup development environment",
                 Description = "Install and configure IDE and dependencies",
@@ -325,7 +325,7 @@
                 CreatedAt = today.AddDays(-45)
             });
 
-            tasks.Add(new Models.Task
+            tasks.Add(new TaskItem
             {
                 Title = "Database optimization",
                 Description = "Optimize slow database queries",
@@ -338,7 +338,7 @@
                 CreatedAt = today.AddDays(-25)
             });
 
-            tasks.Add(new Models.Task
+            tasks.Add(new TaskItem
             {
                 Title = "Buy new clothes",
                 Description = "Purchase new winter clothes",
@@ -351,7 +351,7 @@
                 CreatedAt = today.AddDays(-30)
             });
 
-            tasks.Add(new Models.Task
+            tasks.Add(new TaskItem
             {
                 Title = "Code review",
                 Description = "Review pull requests from team members",
@@ -366,7 +366,7 @@
 
             // ============= JANE'S TASKS =============
             // Today
-            tasks.Add(new Models.Task
+            tasks.Add(new TaskItem
             {
                 Title = "Review deployment logs",
                 Description = "Check prod deployment logs for errors",
@@ -379,7 +379,7 @@
             });
 
             // This week
-            tasks.Add(new Models.Task
+            tasks.Add(new TaskItem
             {
                 Title = "Approve budget allocation",
                 Description = "Review and approve Q1 budget allocation",
@@ -392,7 +392,7 @@
             });
 
             // This month
-            tasks.Add(new Models.Task
+            tasks.Add(new TaskItem
             {
                 Title = "Stakeholder presentation",
                 Description = "Present project status to stakeholders",
@@ -405,7 +405,7 @@
             });
 
             // Overdue
-            tasks.Add(new Models.Task
+            tasks.Add(new TaskItem
             {
                 Title = "Vendor contract negotiation",
                 Description = "Finalize vendor contract terms",
@@ -418,7 +418,7 @@
             });
 
             // Completed
-            tasks.Add(new Models.Task
+            tasks.Add(new TaskItem
             {
                 Title = "Team training session",
                 Description = "Conduct training session on new tools",
@@ -434,7 +434,7 @@
             return tasks;
         }
 
-        private static List<TaskNote> CreateTaskNotes(List<Models.Task> tasks)
+        private static List<TaskNote> CreateTaskNotes(List<TaskItem> tasks)
         {
             var notes = new List<TaskNote>();
             var today = DateTime.UtcNow;

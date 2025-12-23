@@ -18,6 +18,6 @@ namespace TaskManagementAPI.Models
         public int TaskId { get; set; }
 
         [ForeignKey("TaskId")]
-        public Models.Task? Task { get; set; }
+        public TaskItem? Task { get; set; }
     }
 }

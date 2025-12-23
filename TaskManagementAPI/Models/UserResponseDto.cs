@@ -8,6 +8,5 @@
         public string Email { get; set; }
         public Role UserRole { get; set; }
         public DateTime CreatedAt { get; set; }
-        public string? Token {  get; set; }
     }
 }

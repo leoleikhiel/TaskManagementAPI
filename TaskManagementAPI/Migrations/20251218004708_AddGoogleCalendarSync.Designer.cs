@@ -12,8 +12,8 @@ using TaskManagementAPI.Data;
 namespace TaskManagementAPI.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251203115724_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20251218004708_AddGoogleCalendarSync")]
+    partial class AddGoogleCalendarSync
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -46,7 +46,88 @@ namespace TaskManagementAPI.Migrations
                     b.ToTable("Category", (string)null);
                 });
 
-            modelBuilder.Entity("TaskManagementAPI.Models.Task", b =>
+            modelBuilder.Entity("TaskManagementAPI.Models.GoogleCalendarToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AccessToken")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("CalendarId")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RefreshToken")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("TokenExpiry")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("GoogleCalendarTokens");
+                });
+
+            modelBuilder.Entity("TaskManagementAPI.Models.TaskCalendarSync", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("GoogleEventId")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<DateTime>("LastSyncedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("SyncStatus")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TaskId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GoogleEventId");
+
+                    b.HasIndex("TaskId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("TaskCalendarSyncs");
+                });
+
+            modelBuilder.Entity("TaskManagementAPI.Models.TaskItem", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -69,8 +150,19 @@ namespace TaskManagementAPI.Migrations
                     b.Property<DateTime?>("DueDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("GoogleEventId")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
                     b.Property<bool>("IsCompleted")
                         .HasColumnType("bit");
+
+                    b.Property<bool>("IsSyncedToCalendar")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastCalendarSync")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("ScheduledDate")
                         .HasColumnType("datetime2");
@@ -173,7 +265,37 @@ namespace TaskManagementAPI.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("TaskManagementAPI.Models.Task", b =>
+            modelBuilder.Entity("TaskManagementAPI.Models.GoogleCalendarToken", b =>
+                {
+                    b.HasOne("TaskManagementAPI.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("TaskManagementAPI.Models.TaskCalendarSync", b =>
+                {
+                    b.HasOne("TaskManagementAPI.Models.TaskItem", "Task")
+                        .WithOne("CalendarSync")
+                        .HasForeignKey("TaskManagementAPI.Models.TaskCalendarSync", "TaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TaskManagementAPI.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Task");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("TaskManagementAPI.Models.TaskItem", b =>
                 {
                     b.HasOne("TaskManagementAPI.Models.Category", "Category")
                         .WithMany()
@@ -192,7 +314,7 @@ namespace TaskManagementAPI.Migrations
 
             modelBuilder.Entity("TaskManagementAPI.Models.TaskNote", b =>
                 {
-                    b.HasOne("TaskManagementAPI.Models.Task", "Task")
+                    b.HasOne("TaskManagementAPI.Models.TaskItem", "Task")
                         .WithMany("Notes")
                         .HasForeignKey("TaskId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -201,8 +323,10 @@ namespace TaskManagementAPI.Migrations
                     b.Navigation("Task");
                 });
 
-            modelBuilder.Entity("TaskManagementAPI.Models.Task", b =>
+            modelBuilder.Entity("TaskManagementAPI.Models.TaskItem", b =>
                 {
+                    b.Navigation("CalendarSync");
+
                     b.Navigation("Notes");
                 });
 

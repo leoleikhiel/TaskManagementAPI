@@ -7,6 +7,7 @@ using System.Text;
 using TaskManagementAPI.Services;
 using TaskManagementAPI.Data;
 using TaskManagementAPI.Models;
+using Google.Apis.Auth;
 
 namespace TaskManagementAPI.Services
 {
@@ -52,7 +53,7 @@ namespace TaskManagementAPI.Services
             };
         }
 
-        public async Task<UserResponseDto?> LoginAsync(LoginDto loginDto)
+        public async Task<object?> LoginAsync(LoginDto loginDto)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == loginDto.Email);
             if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash))
@@ -60,16 +61,72 @@ namespace TaskManagementAPI.Services
                 return null;
             }
             var token = GenerateJwtToken(user);
-            return new UserResponseDto
+            var userResponseDto = new UserResponseDto
             {
                 Id = user.Id,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email,
                 UserRole = user.UserRole,
-                CreatedAt = user.CreatedAt,
-                Token = token
+                CreatedAt = user.CreatedAt
             };
+
+            return new
+            {
+                Token = token,
+                User = userResponseDto
+            };
+        }
+
+        public async Task<object?> GoogleLoginAsync(string idToken)
+        {
+            try
+            {
+                var settings = new GoogleJsonWebSignature.ValidationSettings
+                {
+                    Audience = new[] { _configuration["Google:ClientId"] }
+                };
+
+                var payload = await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
+
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == payload.Email);
+
+                if (user == null)
+                {
+                    user = new User
+                    {
+                        Email = payload.Email,
+                        FirstName = payload.GivenName ?? "User",
+                        LastName = payload.FamilyName ?? "",
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString())
+                    };
+
+                    _context.Users.Add(user);
+                    await _context.SaveChangesAsync();
+                }
+
+                var token = GenerateJwtToken(user);
+
+                var userResponseDto = new UserResponseDto
+                {
+                    Id = user.Id,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    Email = user.Email,
+                    UserRole = user.UserRole,
+                    CreatedAt = user.CreatedAt
+                };
+
+                return new
+                {
+                    Token = token,
+                    User = userResponseDto
+                };
+            }
+            catch (InvalidJwtException)
+            {
+                return null;
+            }
         }
 
         private string GenerateJwtToken(User user)

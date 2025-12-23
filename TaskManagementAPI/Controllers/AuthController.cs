@@ -48,5 +48,18 @@ namespace TaskManagementAPI.Controllers
 
             return Ok(user);
         }
+
+        [HttpPost("google")]
+        public async Task<IActionResult> GoogleLogin([FromBody] GoogleAuthDto googleAuth)
+        {
+            var result = await _authService.GoogleLoginAsync(googleAuth.IdToken);
+
+            if (result == null)
+            {
+                return Unauthorized(new { message = "Invalid Google token" });
+            }
+
+            return Ok(result);
+        }
     }
 }

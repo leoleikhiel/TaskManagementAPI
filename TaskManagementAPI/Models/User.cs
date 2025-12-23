@@ -28,6 +28,6 @@ namespace TaskManagementAPI.Models
         public Role UserRole { get; set; } = Role.Regular;
 
         public ICollection<Category>? Categories { get; set; }
-        public ICollection<Models.Task>? Tasks { get; set; }
+        public ICollection<TaskItem>? Tasks { get; set; }
     }
 }

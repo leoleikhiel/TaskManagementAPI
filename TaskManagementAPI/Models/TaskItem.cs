@@ -1,8 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TaskManagementAPI.Models
 {
-    public class Task
+    public class TaskItem
     {
         public int Id { get; set; }
         public string? Title { get; set; }
@@ -17,6 +18,13 @@ namespace TaskManagementAPI.Models
         public ICollection<TaskNote> Notes { get; set; } = new List<TaskNote>();
         public DateTime? ScheduledDate { get; set; }
         public DateTime? CompletedAt { get; set; }
+        public bool IsSyncedToCalendar { get; set; } = false;
+
+        [MaxLength(1024)]
+        public string GoogleEventId { get; set; } = string.Empty;
+
+        public DateTime? LastCalendarSync { get; set; }
+        public TaskCalendarSync? CalendarSync { get; set; }
 
         [NotMapped]
         public bool IsOverdue => !IsCompleted && DueDate.HasValue && DateTime.UtcNow.Date > DueDate.Value.Date;

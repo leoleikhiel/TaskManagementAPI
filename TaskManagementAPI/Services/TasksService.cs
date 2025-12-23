@@ -13,12 +13,12 @@ namespace TaskManagementAPI.Services
             _context = context;
         }
 
-        private DateTime? GetDisplayDate(Models.Task task)
+        private DateTime? GetDisplayDate(TaskItem task)
         {
             return task.ScheduledDate ?? task.DueDate;
         }
 
-        private TaskListItemDto MapToListItemDto(Models.Task task)
+        private TaskListItemDto MapToListItemDto(TaskItem task)
         {
             return new TaskListItemDto
             {
@@ -33,7 +33,7 @@ namespace TaskManagementAPI.Services
             };
         }
 
-        public async Task<IEnumerable<Models.Task>> GetAllTasksAsync(int userId)
+        public async Task<IEnumerable<TaskItem>> GetAllTasksAsync(int userId)
         {
             return await _context.Tasks
                 .Include(t => t.Category)
@@ -41,7 +41,7 @@ namespace TaskManagementAPI.Services
                 .ToListAsync();
         }
 
-        public async Task<Models.Task?> GetTaskByIdAsync(int taskId, int userId)
+        public async Task<TaskItem?> GetTaskByIdAsync(int taskId, int userId)
         {
             return await _context.Tasks
                 .Include(t => t.Category)
@@ -49,7 +49,7 @@ namespace TaskManagementAPI.Services
                 .FirstOrDefaultAsync(t => t.Id == taskId);
         }
 
-        public async Task<Models.Task> CreateTaskAsync(CreateTaskDto taskDto, int userId)
+        public async Task<TaskItem> CreateTaskAsync(CreateTaskDto taskDto, int userId)
         {
             var createCategoryId = taskDto.CategoryId;
             if (taskDto.CategoryId.HasValue)
@@ -62,7 +62,7 @@ namespace TaskManagementAPI.Services
                 }
             }
 
-            var task = new Models.Task
+            var task = new TaskItem
             {
                 Title = taskDto.Title,
                 Description = taskDto.Description,
@@ -75,7 +75,7 @@ namespace TaskManagementAPI.Services
             return task;
         }
 
-        public async Task<Models.Task?> UpdateTaskAsync(int taskId, UpdateTaskDto taskDto, int userId)
+        public async Task<TaskItem?> UpdateTaskAsync(int taskId, UpdateTaskDto taskDto, int userId)
         {
             var task = await GetTaskByIdAsync(taskId, userId);
             if (task == null) return null;
@@ -133,7 +133,7 @@ namespace TaskManagementAPI.Services
                 .ExecuteUpdateAsync(s => s.SetProperty(t => t.IsCompleted, true));
         }
 
-        public async Task<IEnumerable<Models.Task>> SearchTasksAsync(string title, int userId)
+        public async Task<IEnumerable<TaskItem>> SearchTasksAsync(string title, int userId)
         {
             return await _context.Tasks
                 .Include(t => t.Category)
@@ -141,7 +141,7 @@ namespace TaskManagementAPI.Services
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<Models.Task>> FilterTasksAsync(bool? isCompleted, int? categoryId, int userId)
+        public async Task<IEnumerable<TaskItem>> FilterTasksAsync(bool? isCompleted, int? categoryId, int userId)
         {
             var query = _context.Tasks
                 .Include(t => t.Category)
